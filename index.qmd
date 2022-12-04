@@ -1,0 +1,265 @@
+---
+title: "index"
+format: html
+server: shiny
+---
+
+Los siguientes reportes de avistamientos de las especies de primates _cebus capuchinos_, 
+
+```{r}
+#| label: carga de paquetes necesarios para desarrollar el ejercicio 
+library(rsconnect)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(DT)
+library(shiny)
+library(sf)
+library(leaflet)
+library(rgdal)
+library(tidyverse)
+library(plotly)
+setwd("C:/Users/oscar/Desktop/Tarea3/Trabajo_final_Program")
+
+```
+
+
+```{r}
+#| label: importacion de datos de aves
+#| warning: false
+#| message: false
+#| code-fold: true
+
+primates <-
+  read_delim(
+    file = "C:/Users/oscar/Desktop/Tarea3//Trabajo_final_Program/primates.csv",
+    col_select = c(
+      "species",
+      "stateProvince",
+      "locality",
+      "eventDate",
+      "decimalLongitude",
+      "decimalLatitude"),
+                  locale = locale(encoding = "UTF-8")
+  )
+
+```
+
+```{r}
+
+#| label: transformación de datos
+#| warning: false
+#| message: false
+#| code-fold: true
+
+primates <- primates|>
+  mutate (eventDate = as.Date(eventDate, format = "%d/%m/%Y"))
+
+```
+
+```{r}
+#| label: Generación de las tabla dinámica
+#| warning: false
+#| message: false
+#| code-fold: true
+
+primates |>
+  datatable(options = list(
+    pageLength = 5,
+    language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json')),
+    colnames = c("id","Especies","Provincia","Localidad","Fecha","long", "lat")
+  )
+
+View(primates)
+
+
+```
+
+
+```{r}
+#| label: separacion de la fecha
+#| warning: false
+#| message: false
+#| echo: false
+primates <-
+  primates |>
+  mutate(year = as.numeric(format(eventDate,'%Y'))) |>
+  mutate(month = as.numeric(format(eventDate,'%m'))) |> 
+  arrange((month))|>
+  mutate(day = as.numeric(format(eventDate,'%d')))
+```
+
+
+```{r}
+#| label: grafico de especies por mes
+#| warning: false
+#| message: false
+#| code-fold: true
+
+grafico_especies_mes <-
+primates |>
+  ggplot(aes(x = month, fill = species))+
+  scale_x_continuous(breaks = seq(1,12,1))+
+  scale_x_continuous(breaks = seq(1,12,1),
+                     labels = c("1" =
+                    "Ene", "2" = "Feb",                     "3" = "Mar", "4" =
+                    "Abr", "5" = "May", 
+                    "6" = "Jun", "7" =
+                    "Jul", "8" = "Ago",
+                    "9" ="Sep", "10" =                     "Oct", "11" = 
+                    "Nov", "12" = 
+                    "Dic"))+
+  geom_bar() +
+  ggtitle("Registros mensuales por especie de primate") +
+  xlab("Meses") +
+  ylab("Observaciones") +
+  labs(fill = "Especies") +
+  theme_economist()
+
+library(plotly)
+# Gráfico de barras plotly
+ggplotly(grafico_especies_mes) |> 
+  config(locale = 'es')
+```
+
+
+```{r}
+#| label: SF conjunto de funciones para datos vectoriales, estándar Simple Features.
+#| code-fold: true
+#| output: false
+#| warning: false
+#| message: false
+
+library(sf)
+#Carga de shape de áreas protegidas
+ASP <-
+  st_read(
+    "C:/Users/oscar/Desktop/Tarea3/ASP.shp",
+    quiet = TRUE # quiet previene el despliegue de mensajes
+  )
+st_crs(ASP)
+
+#Transformación de CRS del objeto ASP de crtm05 a WGS84 (EPSG = 4326)
+ASP <-
+  ASP |>
+  st_transform(4326)
+
+```
+
+```{r}
+#| label: Plot de áres protejidas de Costa Rica
+#| warning: false
+#| message: false
+#| code-fold: true
+
+plot(ASP$geometry, 
+    extent = st_bbox(c(xmin = -86.0, xmax = -82.3, ymin = 8.0, ymax = 11.3)),
+  main = "Áreas Silvestres Protegidas",
+  axes = TRUE,
+  graticule = TRUE,
+  reset = FALSE
+)
+#Segunda capa
+CR <-
+  st_read(
+    "C:/Users/oscar/Documents/SIGparaBiol/Cuencas/AtlasCostaRica2014v.1.2/BaseDatosZip/LineaContinental/LineaContinental/bordecr2008polycrtm05.shp",
+    quiet = TRUE # quiet previene el despliegue de mensajes
+  )
+CR <-
+  CR |>
+  st_transform(4326)
+
+plot(CR$geometry,
+     add = TRUE)
+
+```
+
+
+```{r}
+#| label: Paquetes para datos geoespaciales 
+#| warning: false
+#| message: false
+#| echo: false
+library(leafem)
+library(leaflet)
+library(leaflet.extras)
+library(leaflet.providers)
+library(terra)
+library(raster)
+library(rgdal)
+```
+
+
+```{r}
+#| label: Paso de csv felinos a SF 
+#| warning: false
+#| message: false
+#| output: false
+#| code-fold: true
+
+shp_primates <-
+  st_as_sf(primates, coords = c("decimalLongitude",
+      "decimalLatitude"))
+
+st_crs(shp_primates) <- 4326 #Asignación de coordenadas
+
+st_crs(shp_primates)
+```
+
+
+```{r}
+#| label: Mapa de primates en Costa Rica
+#| warning: false
+#| message: false
+#| code-fold: true
+leaflet() |>
+  setView(# centro y nivel inicial de acercamiento
+    lng = -84.19452,
+    lat = 9.572735,
+    zoom = 6) |>
+  addTiles(group = "OpenStreetMap") |>
+  addProviderTiles(providers$Esri.NatGeoWorldMap)|>
+  addPolygons(
+    # capa de áreas silvestres protegidas (polígonos)
+    data = ASP,
+    color = "black",
+    fillColor = "transparent",
+    stroke = TRUE,
+    weight = 2.0
+  ) |>
+  addCircleMarkers(
+    # capa de registros de presencia (puntos)
+    data = shp_primates,
+    stroke = F,
+    radius = 1,
+    fillColor = 'blue',
+    fillOpacity = 1,
+    group = "Primates",
+    popup = paste(
+      paste0("<strong>Especie: </strong>", primates$species),
+      paste0("<strong>Provincia: </strong>", primates$stateProvince),
+      paste0("<strong>Localidad: </strong>", primates$locality),
+      paste0("<strong>Fecha: </strong>", primates$eventDate)
+    )
+  ) |>
+  addLayersControl(
+    baseGroups = c("OpenStreetMap", "CartoDB.Positron"),
+    overlayGroups = c("primates", "ASP")) |> # control de capas
+  addResetMapButton() |> # botón de reinicio
+  addSearchOSM() |> # búsqueda en OSM
+  addMouseCoordinates() |> # coordenadas del puntero del ratón
+  addScaleBar(position = "bottomleft", options = scaleBarOptions(imperial = FALSE)) |> # barra de escala
+  addMiniMap(position = "bottomleft")  # mapa de ubicación
+```
+
+
+```{r}
+#| context: server
+output$distPlot <- renderPlot({
+   x <- faithful[, 2]  # Old Faithful Geyser data
+   bins <- seq(min(x), max(x), length.out = input$bins + 1)
+   hist(x, breaks = bins, col = 'darkgray', border = 'white',
+        xlab = 'Waiting time to next eruption (in mins)',
+        main = 'Histogram of waiting times')
+})
+```
