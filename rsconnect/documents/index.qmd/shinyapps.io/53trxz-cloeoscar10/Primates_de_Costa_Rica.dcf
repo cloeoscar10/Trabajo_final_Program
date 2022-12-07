@@ -1,0 +1,16 @@
+name: Primates_de_Costa_Rica
+title: Primates_de_Costa_Rica
+username:
+account: 53trxz-cloeoscar10
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7805834
+bundleId: 6587737
+url: https://53trxz-cloeoscar10.shinyapps.io/Primates_de_Costa_Rica/
+when: 1670115569.76541
+lastSyncTime: 1670115569.76542
+quarto_version: 1.0.36
+quarto_engines: knitr
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: cathartes.csv|jacana.csv

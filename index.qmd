@@ -1,13 +1,19 @@
 ---
-title: "index"
-format: html
+title: "Primates de Costa Rica"
+format:
+  html: 
+    page-layout: custom
 server: shiny
+author: "Oscar Vásquez Bolaños"
 ---
 
 Los siguientes reportes de avistamientos de las especies de primates _cebus capuchinos_, 
 
 ```{r}
 #| label: carga de paquetes necesarios para desarrollar el ejercicio 
+#| warning: false
+#| message: false
+#| code-fold: true
 library(rsconnect)
 library(dplyr)
 library(ggplot2)
@@ -70,9 +76,84 @@ primates |>
     colnames = c("id","Especies","Provincia","Localidad","Fecha","long", "lat")
   )
 
-View(primates)
+```
+```{r}
+#| label: lectura-datos para shiny
+#| context: data
+# Bloque para lectura de datos y compartirlos
+# en todos los bloques de código
+# Archivo DwC con registros de presencia
+primates_dwc <- "C:/Users/oscar/Desktop/Tarea3/Trabajo_final_Program/primates.csv"
+# Lectura del archivo DwC
+registros <-
+  st_read(
+    primates_dwc,
+    options = c(
+      "X_POSSIBLE_NAMES=decimalLongitude", # columna de longitud decimal
+      "Y_POSSIBLE_NAMES=decimalLatitude"   # columna de latitud decimal
+    ),
+    quiet = TRUE
+  )
+```
+
+```{r}
+#| label: interfaz de usuario barra lateral
+#| panel: sidebar
+# Barra lateral
+# Lista de especies
+lista_especies <- unique(registros$species)
+lista_especies <- sort(lista_especies)
+lista_especies <- c("Todas", lista_especies)
+# Selector de especies
+selectInput(
+  inputId = "species",
+  label = "Especie",
+  choices = lista_especies,
+  selected = "Todas"
+)
+```
+
+```{r}
+#| panel: fill
+# Cuerpo principal de la interfaz de usuario
+dataTableOutput("tabla")
+```
 
 
+```{r}
+#| label: servidor
+#| context: server
+# Operaciones en el servidor
+# Función reactiva para filtrar los registros con base en los controles de entrada
+filtrarRegistros <- reactive({
+  # Valor inicial del objeto que va a retornarse
+  registros_filtrados <- registros
+  
+  if (input$species != "Todas") {
+    registros_filtrados <-
+      registros_filtrados |>
+      filter(species == input$species)
+  }
+  return(registros_filtrados)
+})
+
+# Tabla con registros de presencia
+'server' <- function(input, output, session) {
+output$tabla <- renderDataTable({
+  registros <- filtrarRegistros()
+  
+  registros |>
+    st_drop_geometry() |>
+    select(species, stateProvince, locality, eventDate) |>
+    datatable(
+      colnames = c("Especie", "Provincia", "Localidad", "Fecha"),
+      options = list(
+        pageLength = 5,
+        language = list(url = '//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json')
+      )
+    )
+})
+}
 ```
 
 

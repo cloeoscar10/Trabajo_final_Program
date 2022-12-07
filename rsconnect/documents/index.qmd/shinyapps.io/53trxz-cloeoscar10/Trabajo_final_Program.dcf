@@ -1,0 +1,16 @@
+name: Trabajo_final_Program
+title: Trabajo_final_Program
+username:
+account: 53trxz-cloeoscar10
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7805946
+bundleId: 6594625
+url: https://53trxz-cloeoscar10.shinyapps.io/Trabajo_final_Program/
+when: 1670260247.36433
+lastSyncTime: 1670260247.36435
+quarto_version: 1.0.36
+quarto_engines: knitr
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: cathartes.csv|jacana.csv
